@@ -161,15 +161,16 @@ async def scramble_message(text: str, silliness: float) -> str:
 
             # Phase 1: marking words based on silliness value
             phase1 = await mark_words(tagged_words, silliness)
-
+            print(f"marking phase: {phase1}")
             # Phase 2: replacing marked words with synonyms
             phase2 = await replace_synonyms(phase1, silliness)
+            print(f"synonym phase: {phase2}")
 
             # Phase 3: replacing certain punctuation
             phase3 = await replace_punctuation(phase2, silliness)
-
             # Sort words by position to maintain original order
             phase3.sort(key=lambda x: x.position)
+            print(f"punctuation phase: {phase3}")
 
             for word in phase3:
                 if '_' in word.word:
