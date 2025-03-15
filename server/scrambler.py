@@ -40,7 +40,7 @@ class Word:
     
 async def convert_message_to_emoji(message: str)->str:
     try:
-        prompt = f"Convert this text message into a sequence of emojis, which represents the sentence. The output should only be the sequence of emojis, with no words. Example: The hiker went parachuting -> 🗻🧍‍♂️🪂. Message: {message}"
+        prompt = f"Convert this text message into a sequence of emojis, which represents the sentence. The output should only be the sequence of emojis, with no words. If there is a problem, simply fill the sentence with random emoticons, no text.  Example: The hiker went parachuting -> 🗻🧍‍♂️🪂. Message: {message}"
 
         res = mistral.chat.complete(
             model="mistral-small-latest", 
