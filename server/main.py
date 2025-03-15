@@ -1,9 +1,14 @@
+import math
+import random
+
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
 import json
 from typing import List
+
+from server.scrambler import scramble_message
 
 app = FastAPI()
 
@@ -32,12 +37,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 @app.websocket("/ws/{user_id}")
 async def websocket_endpoint(user_id: str, websocket: WebSocket):
+    insanity_meter : float = 0
     await websocket.accept()
     connected_users[user_id] = websocket
-    
+
     join_message = f"SYSTEM:{user_id} has joined the chat"
     for user, user_socket in connected_users.items():
         if user != user_id:
@@ -45,23 +50,25 @@ async def websocket_endpoint(user_id: str, websocket: WebSocket):
                 await user_socket.send_text(join_message)
             except:
                 pass
-                
     try:
         while True:
             data = await websocket.receive_text()
+            #scramble the message sent but preserve the username
+            data_new = data.split(':')[0] + scramble_message(data.split(':')[1], random.random())
+
             for user, user_socket in connected_users.items():
                 if user != user_id:
                     try:
-                        await user_socket.send_text(data)
+                        await user_socket.send_text(data_new)
                     except:
                         pass
-            
+
             update_chat_history(data)
     except WebSocketDisconnect:
         leave_message = f"SYSTEM:{user_id} has left the chat"
         if user_id in connected_users:
             del connected_users[user_id]
-            
+
         for user, user_socket in connected_users.items():
             try:
                 await user_socket.send_text(leave_message)
