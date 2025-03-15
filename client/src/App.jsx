@@ -139,10 +139,7 @@ const App = () => {
   };
 
   useEffect(() => {
-    if (
-      messageCount > 0 &&
-      messageCount % (Math.floor(Math.random() * 5) + 1) === 0
-    ) {
+    if (messageCount > 0 && messageCount % 10 === 0) {
       setShowAd(true);
     }
   }, [messageCount]);

@@ -105,10 +105,6 @@ async def websocket_endpoint(user_id: str, websocket: WebSocket):
 async def get_chat_history():
     return load_chat_history()
 
-# @app.get("/")
-# async def root():
-#     return {"message": "Scrappy Chat API is running"}
-
 @app.get("/{rest_of_path:path}")
 async def react_app(req: Request, rest_of_path: str):
     return templates.TemplateResponse('index.html', { 'request': req })
