@@ -8,7 +8,7 @@ from datetime import datetime
 import json
 from typing import List
 
-from server.scrambler import scramble_message
+from scrambler import scramble_message
 
 app = FastAPI()
 
