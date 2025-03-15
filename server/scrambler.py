@@ -2,7 +2,7 @@
 import asyncio
 import nltk  # type: ignore
 from nltk.corpus import stopwords, wordnet  # type: ignore
-
+from typing import List
 async def download_nltk_resources():
     await asyncio.gather(
         asyncio.to_thread(nltk.download, 'stopwords'),
@@ -59,7 +59,6 @@ async def get_synonym(word, pos):
     if not wn_pos:
         return word
     
-    # Moving the synonym search to a separate thread since it's I/O bound
     synonyms = await asyncio.to_thread(get_synonyms_sync, word, wn_pos)
     
     if synonyms:
@@ -74,7 +73,7 @@ def get_synonyms_sync(word, wn_pos):
             synonyms.append(lemma.name())
     return synonyms
 
-async def replace_synonyms(marked_words: [Word], silliness: float) -> list:
+async def replace_synonyms(marked_words: List[Word], silliness: float) -> list:
     replaced_words: list = []
     replace_tasks = []
     
@@ -84,11 +83,9 @@ async def replace_synonyms(marked_words: [Word], silliness: float) -> list:
         else:
             replaced_words.append(word)
     
-    # Wait for all synonym replacements to complete
     processed_words = await asyncio.gather(*replace_tasks)
     replaced_words.extend(processed_words)
     
-    # Sort words back to their original order
     replaced_words.sort(key=lambda x: marked_words.index(x) if x in marked_words else 
                         next(i for i, w in enumerate(processed_words) if w.word == x.word))
     
@@ -98,7 +95,7 @@ async def process_marked_word(word):
     new_word = await get_synonym(word.word, word.tag)
     return Word(new_word, word.marked, word.tag)
 
-async def replace_punctuation(marked_words: [Word], silliness: float) -> list:
+async def replace_punctuation(marked_words: List[Word], silliness: float) -> list:
     replaced_words: list = []
     for word in marked_words:
         if word.tag == ".":

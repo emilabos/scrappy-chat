@@ -5,14 +5,21 @@ from typing import List
 import asyncio
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
-from datetime import datetime
+from fastapi.requests import Request
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 
-# Import the async scramble_message function
 from scrambler import scramble_message, download_nltk_resources
 
 app = FastAPI()
+
+templates = Jinja2Templates(directory="./ui/build")
+
+app.mount('/static', StaticFiles(directory=f"./ui/build/static"), 'static')
+
+app.mount("/assets", StaticFiles(directory=f"./ui/build/assets"), name="assets")
 
 def load_chat_history():
     try:
@@ -95,12 +102,20 @@ async def websocket_endpoint(user_id: str, websocket: WebSocket):
 
 @app.get("/chat-log")
 async def get_chat_history():
-    """API endpoint to retrieve chat history"""
     return load_chat_history()
 
-@app.get("/")
-async def root():
-    return {"message": "Scrappy Chat API is running"}
+# @app.get("/")
+# async def root():
+#     return {"message": "Scrappy Chat API is running"}
+
+@app.get("/{rest_of_path:path}")
+async def react_app(req: Request, rest_of_path: str):
+    return templates.TemplateResponse('index.html', { 'request': req })
+
+@app.get("/assets/{file_path:path}")
+def get_asset(file_path: str):
+    return FileResponse(f"./ui/build/{file_path}")
+
 
 if __name__ == "__main__":
     import uvicorn

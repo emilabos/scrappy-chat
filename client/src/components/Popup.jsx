@@ -11,6 +11,8 @@ const AdPopup = ({ isShowing, handleClose }) => {
   const [error, setError] = useState(null);
   const playerRef = useRef(null);
 
+  const assetsDir = "/assets";
+
   const onClose = () => {
     if (videoCompleted) {
       Cookies.remove("showAd");
@@ -23,7 +25,7 @@ const AdPopup = ({ isShowing, handleClose }) => {
   useEffect(() => {
     const fetchAds = async () => {
       try {
-        const adsResponse = await fetch("/ads.json");
+        const adsResponse = await fetch(assetsDir + "/ads.json");
         setAvailableAds(await adsResponse.json());
       } catch (err) {
         console.error("Error loading data:", err);
