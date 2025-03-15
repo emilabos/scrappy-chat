@@ -1,14 +1,16 @@
 import math
 import random
+import json
+from typing import List
+import asyncio
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
-import json
-from typing import List
 
-from scrambler import scramble_message
+# Import the async scramble_message function
+from scrambler import scramble_message, download_nltk_resources
 
 app = FastAPI()
 
@@ -37,9 +39,16 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.on_event("startup")
+async def startup_event():
+    # Download NLTK resources when the server starts
+    await download_nltk_resources()
+    print("NLTK resources downloaded successfully")
+
 @app.websocket("/ws/{user_id}")
 async def websocket_endpoint(user_id: str, websocket: WebSocket):
-    insanity_meter : float = 0
+    insanity_meter: float = 0
     await websocket.accept()
     connected_users[user_id] = websocket
 
@@ -53,16 +62,22 @@ async def websocket_endpoint(user_id: str, websocket: WebSocket):
     try:
         while True:
             data = await websocket.receive_text()
-            #scramble the message sent but preserve the username
-            data_new = data.split(':')[0] + scramble_message(data.split(':')[1], random.random())
-            for user, user_socket in connected_users.items():
-                if user != user_id:
-                    try:
-                        await user_socket.send_text(data_new)
-                    except:
-                        pass
+            data_split = data.split(':', 1) 
+            if len(data_split) == 2:
+                username = data_split[0]
+                message_content = data_split[1]
+                
+                scrambled_message = await scramble_message(message_content, random.random())
+                data_new = f"{username}:{scrambled_message}"
+                
+                for user, user_socket in connected_users.items():
+                    if user != user_id:
+                        try:
+                            await user_socket.send_text(data_new)
+                        except:
+                            pass
 
-            update_chat_history(data)
+                update_chat_history(data_new)
     except WebSocketDisconnect:
         leave_message = f"SYSTEM:{user_id} has left the chat"
         if user_id in connected_users:
