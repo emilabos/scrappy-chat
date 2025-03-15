@@ -21,8 +21,7 @@ async def download_nltk_resources():
         asyncio.to_thread(nltk.download, 'stopwords'),
         asyncio.to_thread(nltk.download, 'wordnet'),
         asyncio.to_thread(nltk.download, 'punkt'),
-        asyncio.to_thread(nltk.download, 'punkt_tab'),
-        asyncio.to_thread(nltk.download, 'averaged_perceptron_tagger_eng'),
+        asyncio.to_thread(nltk.download, 'averaged_perceptron_tagger'),
         asyncio.to_thread(nltk.download, 'universal_tagset')
     )
 
@@ -40,20 +39,24 @@ class Word:
         return self.word
     
 async def convert_message_to_emoji(message: str)->str:
-    prompt = f"Convert this text message into a sequence of emojis, which represents the sentence. The output should only be the sequence of emojis, with no words. Example: The hiker went parachuting -> 🗻🧍‍♂️🪂. Message: {message}"
+    try:
+        prompt = f"Convert this text message into a sequence of emojis, which represents the sentence. The output should only be the sequence of emojis, with no words. Example: The hiker went parachuting -> 🗻🧍‍♂️🪂. Message: {message}"
 
-    res = mistral.chat.complete(
-        model="mistral-small-latest", 
-        messages=[
-            {
-                "content": prompt,
-                "role": "user",
-            },
-        ], 
-        stream=False
-    )
+        res = mistral.chat.complete(
+            model="mistral-small-latest", 
+            messages=[
+                {
+                    "content": prompt,
+                    "role": "user",
+                },
+            ], 
+            stream=False
+        )
 
-    return res.choices[0].message.content
+        return res.choices[0].message.content
+    except Exception as e:
+        print(f"Error in emoji conversion: {e}")
+        return message  # Fallback to original message if API fails
 
 
 async def mark_words(pos_tagged_words: list, silliness: float) -> list:
@@ -61,17 +64,17 @@ async def mark_words(pos_tagged_words: list, silliness: float) -> list:
     i = 0
     for word, tag in pos_tagged_words:
         item = Word(word, False, tag, i)
-        if 0.1 < silliness:
+        if silliness > 0.1:
             if tag == "VERB":
                 item.marked = True
             if tag == "NOUN":
                 item.marked = True
-        elif 0.4 < silliness:
+        if silliness > 0.4:
             if tag == "ADJ":
                 item.marked = True
             elif tag == "ADV":
                 item.marked = True
-        elif silliness > 0.5:
+        if silliness > 0.5:
             if tag == "PUNCT":
                 item.marked = True
         marked_words.append(item)
@@ -89,7 +92,7 @@ def universal_to_wn_pos(pos):
     return dict[pos] if pos in dict else None
 
 
-async def get_synonym(word : Word, pos):
+async def get_synonym(word, pos):
     wn_pos = universal_to_wn_pos(pos)
     if not wn_pos:
         return word
@@ -103,82 +106,84 @@ async def get_synonym(word : Word, pos):
 
 def get_synonyms_sync(word, wn_pos):
     synonyms = []
-    for syn in wordnet.synsets(word, wn_pos):
+    for syn in wordnet.synsets(word.word if isinstance(word, Word) else word, wn_pos):
         for lemma in syn.lemmas():
             synonyms.append(lemma.name())
     return synonyms
 
-async def replace_synonyms(marked_words: List[Word], silliness: float) -> list:
-    replaced_words: list = []
-    replace_tasks = []
-    word_map = {}
-    i = 0
+async def process_marked_word(word: Word):
+    new_word = await get_synonym(word.word, word.tag)
+    return Word(new_word, word.marked, word.tag, word.position)
+
+async def replace_synonyms(marked_words: List[Word], silliness: float) -> List[Word]:
+    tasks = []
+    result = []
+    
+    # Create a list to hold our results, initialized with None
+    result = [None] * len(marked_words)
+    
+    # Create tasks for processing marked words
     for word in marked_words:
         if word.tag in ["ADJ", "ADV", "NOUN", "VERB"] and word.marked:
-            replace_tasks.append(await process_marked_word(word, i))
-            word_map[word.position] = word.word
+            # Start task but store it with its position
+            task = asyncio.create_task(process_marked_word(word))
+            tasks.append((task, word.position))
         else:
-            replaced_words.append(word)
-            word_map[word.position] = word.word
-        i += 1
-    processed_words = await asyncio.gather(*replace_tasks)
-    replaced_words.extend(processed_words)
+            # For unmarked words, just place them directly in the result
+            result[word.position] = word
     
-    # replaced_words.sort(key=lambda x: marked_words.index(x) if x in marked_words else
-    #                     next(i for i, w in enumerate(processed_words) if w.word == x.word))
-    for i in range(len(marked_words)):
-        item = word_map[i]
-        if isinstance(item, asyncio.Task):
-            replaced_words.append(await item)
-        else:
-            replaced_words.append(item)
-    return replaced_words
-
-
-async def process_marked_word(word:Word, position):
-    new_word = await get_synonym(word.word, word.tag)
-    return Word(new_word, word.marked, word.tag, position)
+    # Wait for all tasks to complete
+    if tasks:
+        for task, position in tasks:
+            processed_word = await task
+            result[position] = processed_word
+    
+    # Filter out any None values (shouldn't happen, but just in case)
+    return [word for word in result if word is not None]
 
 async def replace_punctuation(marked_words: List[Word], silliness: float) -> list:
     replaced_words: list = []
-    i = 0
     for word in marked_words:
         if word.tag == ".":
-            replaced_words.append(Word(random.choice(['?', '.', '!']), word.marked, word.tag, i))
-        elif word == ",":
-            replaced_words.append(Word(random.choice(['?', '.', '!', '-', '...']), word.marked, word.tag, i))
+            replaced_words.append(Word(random.choice(['?', '.', '!']), word.marked, word.tag, word.position))
+        elif word.word == ",":
+            replaced_words.append(Word(random.choice(['?', '.', '!', '-', '...']), word.marked, word.tag, word.position))
         else:
             replaced_words.append(word)
-        i += 1
     return replaced_words
 
 async def scramble_message(text: str, silliness: float) -> str:
-    final = ""
-    if (random.randint(0,1)):
-        words: list = nltk.word_tokenize(text)
-        tagged_words = nltk.pos_tag(words, tagset="universal")
+    try:
+        final = ""
+        if random.random() < 0.7:  # 70% chance of synonym replacement, 30% chance of emoji
+            words: list = nltk.word_tokenize(text)
+            tagged_words = nltk.pos_tag(words, tagset="universal")
 
+            # Phase 1: marking words based on silliness value
+            phase1 = await mark_words(tagged_words, silliness)
 
-        # Phase 1: marking words based on silliness value
-        phase1 = await mark_words(tagged_words, silliness)
-        print(phase1)
+            # Phase 2: replacing marked words with synonyms
+            phase2 = await replace_synonyms(phase1, silliness)
 
-        # Phase 2: replacing marked words with synonyms
-        phase2 = await replace_synonyms(phase1, silliness)
-        print(phase2)
+            # Phase 3: replacing certain punctuation
+            phase3 = await replace_punctuation(phase2, silliness)
 
-        # Phase 3: replacing certain punctuation
-        phase3 = await replace_punctuation(phase2, silliness)
-        print(phase3)
+            # Sort words by position to maintain original order
+            phase3.sort(key=lambda x: x.position)
 
-        for word in phase3:
-            if '_' in word.word:
-                word.word.replace('_', ' ')
-            elif word.tag == '.':
-                final += word.word
-            else:
-                final += f" {word.word}"
-    else:
-        final = await convert_message_to_emoji(text)
+            for word in phase3:
+                if '_' in word.word:
+                    word.word = word.word.replace('_', ' ')
+                elif word.tag == '.':
+                    final += word.word
+                else:
+                    final += f" {word.word}"
+            
+            final = final.strip()
+        else:
+            final = await convert_message_to_emoji(text)
 
-    return final
+        return final
+    except Exception as e:
+        print(f"Error in scramble_message: {e}")
+        return text  # Return the original text if anything fails
