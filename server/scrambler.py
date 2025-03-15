@@ -118,7 +118,7 @@ async def process_marked_word(word: Word):
 async def replace_synonyms(marked_words: List[Word], silliness: float) -> List[Word]:
     tasks = []
     # Create a list to hold our results, initialized with None
-    result : List[Word] = [] * len(marked_words)*2
+    result : List[Word] = [Word("null", False, ".", 0)] * len(marked_words)*2
     
     # Create tasks for processing marked words
     for word in marked_words:
