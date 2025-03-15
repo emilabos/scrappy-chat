@@ -1,12 +1,11 @@
 ﻿import random
-from http.cookiejar import join_header_words
 
 import nltk
 from nltk.corpus import stopwords, wordnet
 nltk.download('stopwords')
 nltk.download('wordnet')
 nltk.download('punkt')
-
+nltk.download('punkt_tab')
 class Word:
     def __init__(self, word, marked, tag):
         self.word = word
