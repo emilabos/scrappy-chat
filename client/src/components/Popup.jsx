@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import ReactPlayer from "react-player";
+import Cookies from "js-cookie";
 
 const AdPopup = ({ isShowing, handleClose }) => {
   const [currentAd, setCurrentAd] = useState(null);
@@ -12,6 +13,7 @@ const AdPopup = ({ isShowing, handleClose }) => {
 
   const onClose = () => {
     if (videoCompleted) {
+      Cookies.remove("showAd");
       handleClose();
       setVideoCompleted(false);
       setCurrentTime(0);

@@ -139,7 +139,10 @@ const App = () => {
   };
 
   useEffect(() => {
-    if (messageCount > 0 && messageCount % 3 === 0) {
+    if (
+      messageCount > 0 &&
+      messageCount % (Math.floor(Math.random() * 5) + 1) === 0
+    ) {
       setShowAd(true);
     }
   }, [messageCount]);
@@ -246,7 +249,7 @@ const App = () => {
 
   const connectionStatus = {
     [ReadyState.CONNECTING]: "Connecting...",
-    [ReadyState.OPEN]: "Connected",
+    [ReadyState.OPEN]: "Connected [UK]",
     [ReadyState.CLOSING]: "Closing...",
     [ReadyState.CLOSED]: "You are disconnected",
     [ReadyState.UNINSTANTIATED]: "You are not connected to the chat",
@@ -265,7 +268,7 @@ const App = () => {
                 className={`text-xs ${
                   readyState === ReadyState.OPEN
                     ? "text-green-600"
-                    : "text-amber-600"
+                    : "text-amber-700"
                 }`}
               >
                 {connectionStatus}
