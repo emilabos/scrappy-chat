@@ -20,7 +20,7 @@ async def download_nltk_resources():
     await asyncio.gather(
         asyncio.to_thread(nltk.download, 'stopwords'),
         asyncio.to_thread(nltk.download, 'wordnet'),
-        asyncio.to_thread(nltk.download, 'punkt'),
+        asyncio.to_thread(nltk.download, 'punkt_tab'),
         asyncio.to_thread(nltk.download, 'averaged_perceptron_tagger'),
         asyncio.to_thread(nltk.download, 'universal_tagset')
     )
