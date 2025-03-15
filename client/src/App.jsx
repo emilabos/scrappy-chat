@@ -72,7 +72,9 @@ const App = () => {
   const [showModal, setShowModal] = useState(true);
   const [messageInput, setMessageInput] = useState("");
   const [messages, setMessages] = useState([]);
-  const [showAd, setShowAd] = useState(true);
+  const [showAd, setShowAd] = useState(false);
+  const [messageCount, setMessageCount] = useState(0);
+  const adTimerRef = useRef(null);
   const chatBodyRef = useRef(null);
 
   const socketUrl = userName ? `${WS_URL}${userName}` : null;
@@ -82,6 +84,39 @@ const App = () => {
     reconnectAttempts: 5,
     reconnectInterval: 3000,
   });
+
+  // const startAdTimer = () => {
+  //   if (adTimerRef.current) {
+  //     clearTimeout(adTimerRef.current);
+  //   }
+
+  //   const randomTime = Math.floor(Math.random() * (10000 - 5000 + 1)) + 5000;
+
+  //   adTimerRef.current = setTimeout(() => {
+  //     setShowAd(true);
+  //   }, randomTime);
+  // };
+
+  const handleAdClose = () => {
+    setShowAd(false);
+    startAdTimer();
+  };
+
+  // useEffect(() => {
+  //   startAdTimer();
+
+  //   return () => {
+  //     if (adTimerRef.current) {
+  //       clearTimeout(adTimerRef.current);
+  //     }
+  //   };
+  // }, []);
+
+  useEffect(() => {
+    if (messageCount > 0 && messageCount % 5 === 0) {
+      setShowAd(true);
+    }
+  }, [messageCount]);
 
   useEffect(() => {
     const username = localStorage.getItem("username");
@@ -148,6 +183,7 @@ const App = () => {
       };
       setMessages((prev) => [...prev, newMessage]);
       setMessageInput("");
+      setMessageCount((prev) => prev + 1);
     }
   };
 
@@ -269,7 +305,7 @@ const App = () => {
           setShowModal={setShowModal}
         />
       )}
-      {showAd && <AdPopup isShowing={showAd} />}
+      {showAd && <AdPopup isShowing={showAd} handleClose={handleAdClose} />}
     </>
   );
 };

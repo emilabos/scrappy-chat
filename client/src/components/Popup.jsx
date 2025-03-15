@@ -48,14 +48,12 @@ const AdPopup = ({ isShowing, handleClose }) => {
   const handleProgress = (state) => {
     setCurrentTime(state.playedSeconds);
 
-    // Check if video is at the end
     if (state.playedSeconds >= videoDuration - 0.5) {
       setVideoCompleted(true);
     }
   };
 
   const handleSeek = (seconds) => {
-    // If user tries to skip ahead, reset to previous position
     if (seconds > currentTime + 1 && !videoCompleted) {
       playerRef.current.seekTo(currentTime);
     }
@@ -71,35 +69,37 @@ const AdPopup = ({ isShowing, handleClose }) => {
         }`}
       >
         <h2 className="text-2xl font-bold text-raisin-black mb-6 text-center">
-          Please watch the entire ad to continue
+          Watch this ad to continue
         </h2>
 
         <div className="mb-6 flex justify-center align-middle">
-          <ReactPlayer
-            ref={playerRef}
-            muted={true}
-            controls={false}
-            playing={true}
-            url={currentAd}
-            onDuration={handleDuration}
-            onProgress={handleProgress}
-            onSeek={handleSeek}
-            onEnded={() => setVideoCompleted(true)}
-            config={{
-              file: {
-                attributes: {
-                  controlsList: "nodownload",
-                  disablePictureInPicture: true,
+          <div className="rounded-lg">
+            <ReactPlayer
+              ref={playerRef}
+              muted={true}
+              controls={false}
+              playing={true}
+              url={currentAd}
+              onDuration={handleDuration}
+              onProgress={handleProgress}
+              onSeek={handleSeek}
+              onEnded={() => setVideoCompleted(true)}
+              config={{
+                file: {
+                  attributes: {
+                    controlsList: "nodownload",
+                    disablePictureInPicture: true,
+                  },
                 },
-              },
-            }}
-          />
+              }}
+            />
+          </div>
         </div>
 
         <div className="mb-4 text-center text-sm text-gray-600">
           {videoCompleted
             ? "Thank you for watching! You can now close this ad."
-            : "Please watch the entire ad before closing."}
+            : "Please watch the entire ad before closing (you don't really have a choice)"}
         </div>
 
         <button
@@ -114,9 +114,9 @@ const AdPopup = ({ isShowing, handleClose }) => {
         >
           {videoCompleted
             ? "Close Ad"
-            : `Please watch the ad (${Math.round(currentTime)}/${Math.round(
-                videoDuration
-              )}s)`}
+            : `Please watch the ad (${Math.round(
+                videoDuration - currentTime
+              )}s left)`}
         </button>
       </div>
     </div>
