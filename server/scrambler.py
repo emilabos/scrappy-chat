@@ -102,7 +102,9 @@ async def replace_punctuation(marked_words: [Word], silliness: float) -> list:
     replaced_words: list = []
     for word in marked_words:
         if word.tag == ".":
-            replaced_words.append(Word(random.choice([',', '?', '.']), word.marked, word.tag))
+            replaced_words.append(Word(random.choice(['?', '.', '!']), word.marked, word.tag))
+        elif word == ",":
+            replaced_words.append(Word(random.choice(['?', '.', '!', '-', '...']), word.marked, word.tag))
         else:
             replaced_words.append(word)
     return replaced_words
