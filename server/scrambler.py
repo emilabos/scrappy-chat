@@ -120,9 +120,9 @@ async def replace_synonyms(marked_words: List[Word], silliness: float) -> List[W
     result = []
     
     # Create a list to hold our results, initialized with None
-    result : List[Word] = [] * len(marked_words)
+    result : List[Word] = [Word("null", False, ".", 0)] * len(marked_words)
     
-    # Create tasks for processing marked words
+    # Create tasks for processing wmarked words
     for word in marked_words:
         if word.tag in ["ADJ", "ADV", "NOUN", "VERB"] and word.marked:
             # Start task but store it with its position
