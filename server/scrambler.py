@@ -29,8 +29,9 @@ class Word:
 
 async def mark_words(pos_tagged_words: list, silliness: float) -> list:
     marked_words: list = []
+    i = 0
     for word, tag in pos_tagged_words:
-        item = Word(word, False, tag)
+        item = Word(word, False, tag, i)
         if 0.1 < silliness:
             if tag == "VERB":
                 item.marked = True
@@ -45,6 +46,7 @@ async def mark_words(pos_tagged_words: list, silliness: float) -> list:
             if tag == "PUNCT":
                 item.marked = True
         marked_words.append(item)
+        i+=1
     return marked_words
 
 
