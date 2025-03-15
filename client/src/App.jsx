@@ -390,7 +390,7 @@ const App = () => {
           setShowModal={setShowModal}
         />
       )}
-      {/* {showAd && <AdPopup isShowing={showAd} handleClose={handleAdClose} />} */}
+      {showAd && <AdPopup isShowing={showAd} handleClose={handleAdClose} />}
     </>
   );
 };

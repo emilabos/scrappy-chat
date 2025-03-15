@@ -75,6 +75,7 @@ async def websocket_endpoint(user_id: str, websocket: WebSocket):
                 message_content = data_split[1]
                 
                 scrambled_message = await scramble_message(message_content, random.random())
+                print(f"Scrambled message: {scrambled_message}")
                 data_new = f"{username}:{scrambled_message}"
                 
                 for user, user_socket in connected_users.items():
