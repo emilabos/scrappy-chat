@@ -97,7 +97,7 @@ async def get_synonym(word, pos):
     if not wn_pos:
         return word
     
-    synonyms = await asyncio.to_thread(get_synonyms_sync, word, wn_pos)
+    synonyms = await asyncio.to_thread(get_synonyms_sync, word if isinstance(word, str) else word.word, wn_pos)
 
     if synonyms:
         return random.choice(synonyms)
@@ -120,7 +120,7 @@ async def replace_synonyms(marked_words: List[Word], silliness: float) -> List[W
     result = []
     
     # Create a list to hold our results, initialized with None
-    result : List[Word] = [] * len(marked_words)
+    result = [None] * len(marked_words)
     
     # Create tasks for processing marked words
     for word in marked_words:
