@@ -1,74 +1,85 @@
-from fastapi import FastAPI, WebSocket
-
-app = FastAPI()
-from typing import List
-
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
 import json
-# Dictionary to store connected WebSocket clients
+from typing import List
+
+app = FastAPI()
+
+def load_chat_history():
+    try:
+        with open("chat_log.json", "r") as file:
+            chat_log = json.load(file)
+        return chat_log
+    except (FileNotFoundError, json.JSONDecodeError):
+        with open("chat_log.json", "w") as file:
+            json.dump([], file)
+        return []
+
+def update_chat_history(message):
+    chat_log = load_chat_history()
+    chat_log.append(message)
+    with open("chat_log.json", "w") as file:
+        json.dump(chat_log, file)
+
 connected_users = {}
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # can alter with time
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# html = """<!DOCTYPE html>
-# <html>
-#     <head>
-#         <title>Chat</title>
-#     </head>
-#     <body>
-#         <h1>WebSocket Chat</h1>
-#         <form action="" onsubmit="sendMessage(event)">
-#             <input type="text" id="messageText" autocomplete="off"/>
-#             <button>Send</button>
-#         </form>
-#         <ul id='messages'>
-#         </ul>
-#         <script>
-#             const userId = prompt("Enter your user ID (e.g., user1, user2):"); // Prompt the user for their user ID
-#             var ws = new WebSocket(`ws://localhost:8000/ws/${userId}`);
-#             ws.onmessage = function(event) {
-#                 var messages = document.getElementById('messages')
-#                 var message = document.createElement('li')
-#                 var content = document.createTextNode(event.data)
-#                 message.appendChild(content)
-#                 messages.appendChild(message)
-#             };
-#             function sendMessage(event) {
-#                 var input = document.getElementById("messageText")
-#                 ws.send(input.value)
-#                 input.value = ''
-#                 event.preventDefault()
-#             }
-#         </script>
-#     </body>
-# </html>
-# """
-# @app.get("/")
-# async def root():
-#     return HTMLResponse(html)
 @app.websocket("/ws/{user_id}")
-async def websocket_endpoint(user_id:str, websocket: WebSocket):
+async def websocket_endpoint(user_id: str, websocket: WebSocket):
     await websocket.accept()
     connected_users[user_id] = websocket
+    
+    join_message = f"SYSTEM:{user_id} has joined the chat"
+    for user, user_socket in connected_users.items():
+        if user != user_id:
+            try:
+                await user_socket.send_text(join_message)
+            except:
+                pass
+                
     try:
         while True:
             data = await websocket.receive_text()
-            # Send the received data to the other user
             for user, user_socket in connected_users.items():
-                #if (user != user_id):
-                await user_socket.send_text(f"{user}: {data}")
-    except:
-        # If a user disconnects, remove them from the dictionary
-        del connected_users[user_id]
+                if user != user_id:
+                    try:
+                        await user_socket.send_text(data)
+                    except:
+                        pass
+            
+            update_chat_history(data)
+    except WebSocketDisconnect:
+        leave_message = f"SYSTEM:{user_id} has left the chat"
+        if user_id in connected_users:
+            del connected_users[user_id]
+            
+        for user, user_socket in connected_users.items():
+            try:
+                await user_socket.send_text(leave_message)
+            except:
+                pass
+    except Exception as e:
+        print(f"Error in WebSocket: {e}")
+        if user_id in connected_users:
+            del connected_users[user_id]
 
+@app.get("/chat-log")
+async def get_chat_history():
+    """API endpoint to retrieve chat history"""
+    return load_chat_history()
+
+@app.get("/")
+async def root():
+    return {"message": "Scrappy Chat API is running"}
 
 if __name__ == "__main__":
     import uvicorn
