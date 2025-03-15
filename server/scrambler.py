@@ -33,7 +33,7 @@ class Word:
         self.tag = tag
         self.position : int = position
     def __repr__(self):
-        return f"{self.word}: {self.tag}, Marked? {self.marked}"
+        return f"{self.word}: {self.tag}, Marked? {self.marked}, position: {self.position}"
 
     def __str__(self):
         return self.word
@@ -117,10 +117,8 @@ async def process_marked_word(word: Word):
 
 async def replace_synonyms(marked_words: List[Word], silliness: float) -> List[Word]:
     tasks = []
-    result = []
-    
     # Create a list to hold our results, initialized with None
-    result : List[Word] = [] * len(marked_words)
+    result : List[Word] = [] * len(marked_words)*2
     
     # Create tasks for processing marked words
     for word in marked_words:
