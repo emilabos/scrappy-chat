@@ -31,7 +31,7 @@ class Word:
         self.word = word
         self.marked = marked
         self.tag = tag
-        self.position = position
+        self.position : int = position
     def __repr__(self):
         return f"{self.word}: {self.tag}, Marked? {self.marked}"
 
@@ -120,7 +120,7 @@ async def replace_synonyms(marked_words: List[Word], silliness: float) -> List[W
     result = []
     
     # Create a list to hold our results, initialized with None
-    result = [None] * len(marked_words)
+    result : List[Word] = [] * len(marked_words)
     
     # Create tasks for processing marked words
     for word in marked_words:
@@ -139,7 +139,7 @@ async def replace_synonyms(marked_words: List[Word], silliness: float) -> List[W
             result[position] = processed_word
     
     # Filter out any None values (shouldn't happen, but just in case)
-    return [word for word in result if word is not None]
+    return result
 
 async def replace_punctuation(marked_words: List[Word], silliness: float) -> list:
     replaced_words: list = []
