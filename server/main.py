@@ -55,7 +55,6 @@ async def websocket_endpoint(user_id: str, websocket: WebSocket):
             data = await websocket.receive_text()
             #scramble the message sent but preserve the username
             data_new = data.split(':')[0] + scramble_message(data.split(':')[1], random.random())
-            print(data)
             for user, user_socket in connected_users.items():
                 if user != user_id:
                     try:
