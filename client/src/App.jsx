@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { MessageCircleMore, User, LogOut } from "lucide-react";
 import useWebSocket, { ReadyState } from "react-use-websocket";
 
-const WS_URL = "ws://127.0.0.1:800";
+const WS_URL = "ws://localhost:8000/ws/";
 
 const UsernameModal = ({ setUserName, visible, setShowModal }) => {
   const [nameInput, setNameInput] = useState("");
@@ -70,48 +70,17 @@ const App = () => {
   const [userName, setUserName] = useState("");
   const [showModal, setShowModal] = useState(true);
   const [messageInput, setMessageInput] = useState("");
-  const [messages, setMessages] = useState([
-    {
-      user: "Bob",
-      message: "Welcome to Scrappy Chat",
-      timestamp: new Date().toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-    },
-    {
-      user: "Jeff",
-      message: "This is the most useless chat",
-      timestamp: new Date().toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-    },
-    {
-      user: "John",
-      message: "whats up?",
-      timestamp: new Date().toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-    },
-    {
-      user: "Joe",
-      message: "im good thanks",
-      timestamp: new Date().toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-    },
-  ]);
+  const [messages, setMessages] = useState([]);
+  const chatBodyRef = useRef(null);
 
-  const { sendJsonMessage, lastJsonMessage, readyState } = useWebSocket(
-    WS_URL,
-    {
-      share: false,
-      shouldReconnect: () => true,
-    }
-  );
+  // Only establish the websocket connection when we have a username
+  const socketUrl = userName ? `${WS_URL}${userName}` : null;
+
+  const { sendMessage, lastMessage, readyState } = useWebSocket(socketUrl, {
+    shouldReconnect: () => userName !== "",
+    reconnectAttempts: 5,
+    reconnectInterval: 3000,
+  });
 
   useEffect(() => {
     const username = localStorage.getItem("username");
@@ -122,34 +91,54 @@ const App = () => {
   }, []);
 
   useEffect(() => {
-    if (readyState === ReadyState.OPEN) {
-      sendJsonMessage({
-        event: "subscribe",
-        data: {
-          channel: "general-chatroom",
-        },
-      });
+    if (lastMessage !== null) {
+      try {
+        const receivedMessage = lastMessage.data;
+        const newMessage = {
+          user:
+            userName !== receivedMessage.split(":")[0]
+              ? receivedMessage.split(":")[0]
+              : userName,
+          message: receivedMessage.split(":").slice(1).join(":"),
+          timestamp: new Date().toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+        };
+
+        setMessages((prev) => [...prev, newMessage]);
+      } catch (e) {
+        console.error("Error parsing message:", e);
+      }
     }
-  }, [readyState]);
+  }, [lastMessage]);
 
   useEffect(() => {
-    if (lastJsonMessage) {
-      console.log("Got a new message:", lastJsonMessage);
-      // TODO fix this
-      const element = document.getElementById("chat-body");
-      element.scrollTop = element.scrollHeight;
+    // Scroll to bottom when messages update
+    if (chatBodyRef.current) {
+      chatBodyRef.current.scrollTop = chatBodyRef.current.scrollHeight;
     }
-  }, [lastJsonMessage]);
+  }, [messages]);
 
   const handleLogout = () => {
     localStorage.removeItem("username");
     setUserName("");
     setShowModal(true);
+    setMessages([]);
   };
 
   const handleSendMessage = (e) => {
     e.preventDefault();
-    if (messageInput.trim() !== "" && userName) {
+    if (
+      messageInput.trim() !== "" &&
+      userName &&
+      readyState === ReadyState.OPEN
+    ) {
+      // Format message as the server expects: username:message
+      const formattedMessage = `${userName}:${messageInput}`;
+      sendMessage(formattedMessage);
+
+      // Add message to our local state
       const newMessage = {
         user: userName,
         message: messageInput,
@@ -158,18 +147,18 @@ const App = () => {
           minute: "2-digit",
         }),
       };
-      setMessages([...messages, newMessage]);
+      setMessages((prev) => [...prev, newMessage]);
       setMessageInput("");
-
-      // Send to WebSocket if connected
-      if (readyState === ReadyState.OPEN) {
-        sendJsonMessage({
-          event: "message",
-          data: newMessage,
-        });
-      }
     }
   };
+
+  const connectionStatus = {
+    [ReadyState.CONNECTING]: "Connecting...",
+    [ReadyState.OPEN]: "Connected",
+    [ReadyState.CLOSING]: "Closing...",
+    [ReadyState.CLOSED]: "Disconnected",
+    [ReadyState.UNINSTANTIATED]: "Uninstantiated",
+  }[readyState];
 
   return (
     <>
@@ -179,7 +168,17 @@ const App = () => {
           className="sm:w-1/2 w-full rounded-lg shadow-xl h-[90vh] bg-isabelline flex flex-col overflow-hidden"
         >
           <div className="w-full text-center py-4 bg-bone border-b border-bone/50 drop-shadow-md flex justify-between items-center px-6">
-            <div className="flex-1"></div>
+            <div className="flex-1">
+              <span
+                className={`text-xs ${
+                  readyState === ReadyState.OPEN
+                    ? "text-green-600"
+                    : "text-amber-600"
+                }`}
+              >
+                {connectionStatus}
+              </span>
+            </div>
             <h1 className="text-4xl text-raisin-black font-bold flex gap-x-2 items-center justify-center flex-1">
               <span>Scrappy Chat</span>
               <MessageCircleMore className="w-10 h-10" />
@@ -201,6 +200,7 @@ const App = () => {
             </div>
           </div>
           <div
+            ref={chatBodyRef}
             id="chat-body"
             className="flex-1 bg-bone p-4 overflow-y-auto space-y-4"
           >
@@ -245,11 +245,17 @@ const App = () => {
                   : "Type a message..."
               }
               className="flex-1 p-3 rounded-l-lg border-2 border-r-0 border-gray-300 focus:outline-none focus:border-wenge"
+              disabled={readyState !== ReadyState.OPEN}
             />
             <button
               type="submit"
               id="chat-send"
-              className="bg-raisin-black text-bone py-3 px-6 rounded-r-lg hover:bg-wenge transition-colors font-medium"
+              className={`${
+                readyState === ReadyState.OPEN
+                  ? "bg-raisin-black hover:bg-wenge"
+                  : "bg-gray-400 cursor-not-allowed"
+              } text-bone py-3 px-6 rounded-r-lg transition-colors font-medium`}
+              disabled={readyState !== ReadyState.OPEN}
             >
               Send
             </button>
