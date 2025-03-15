@@ -136,6 +136,7 @@ async def replace_synonyms(marked_words: List[Word], silliness: float) -> List[W
     if tasks:
         for task, position in tasks:
             processed_word = await task
+            print(f"adding word {processed_word.word} with position {processed_word.position}")
             result[position] = processed_word
     
     # Filter out any None values (shouldn't happen, but just in case)
