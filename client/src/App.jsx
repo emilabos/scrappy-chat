@@ -4,8 +4,8 @@ import useWebSocket, { ReadyState } from "react-use-websocket";
 import Cookies from "js-cookie";
 import AdPopup from "./components/Popup";
 
-const WS_URL = "wss://scrappy-chat.onrender.com/ws/";
-const API_URL = "https://scrappy-chat.onrender.com";
+const WS_URL = "ws://localhost:8000/ws/";
+const API_URL = "http://localhost:8000";
 
 const UsernameModal = ({ setUserName, visible, setShowModal }) => {
   const [nameInput, setNameInput] = useState("");
@@ -390,7 +390,7 @@ const App = () => {
           setShowModal={setShowModal}
         />
       )}
-      {showAd && <AdPopup isShowing={showAd} handleClose={handleAdClose} />}
+      {/* {showAd && <AdPopup isShowing={showAd} handleClose={handleAdClose} />} */}
     </>
   );
 };
