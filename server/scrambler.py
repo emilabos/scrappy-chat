@@ -72,9 +72,9 @@ def replace_synonyms (marked_words:[Word], silliness:float) -> list:
 def replace_punctuation (marked_words:[Word], silliness:float) -> list:
     replaced_words : list = []
     for word in marked_words:
-        if word.tag == ".":
+        if word.tag == "." and word.marked:
             replaced_words.append(Word(random.choice(['?', '.', '!']), word.marked, word.tag))
-        elif word == ",":
+        elif word == "," and word.marked:
             replaced_words.append(Word(random.choice(['?', '.', '!', '-', '...']), word.marked, word.tag))
         else:
             replaced_words.append(word)
@@ -95,11 +95,14 @@ def scramble_message(text:str, silliness:float) -> str:
     print(phase2)
     phase3 : [Word] = replace_punctuation(phase2, silliness)
     print(phase3)
-
+    final_string = ""
     for word in phase3:
-        new_words.append(word.word)
+        if (word.tag == '.'):
+            final_string += word.word
+        else:
+            final_string += " " + word.word
 
-    return " ".join(new_words)
+    return final_string
 
 if __name__ == "__main__":
     while True:
