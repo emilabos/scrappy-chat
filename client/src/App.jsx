@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
 import { MessageCircleMore, User, LogOut } from "lucide-react";
 import useWebSocket, { ReadyState } from "react-use-websocket";
+import Cookies from "js-cookie";
 import AdPopup from "./components/Popup";
 
 const WS_URL = "ws://localhost:8000/ws/";
+const API_URL = "http://localhost:8000";
 
 const UsernameModal = ({ setUserName, visible, setShowModal }) => {
   const [nameInput, setNameInput] = useState("");
@@ -74,6 +76,7 @@ const App = () => {
   const [messages, setMessages] = useState([]);
   const [showAd, setShowAd] = useState(false);
   const [messageCount, setMessageCount] = useState(0);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const adTimerRef = useRef(null);
   const chatBodyRef = useRef(null);
 
@@ -85,38 +88,76 @@ const App = () => {
     reconnectInterval: 3000,
   });
 
-  // const startAdTimer = () => {
-  //   if (adTimerRef.current) {
-  //     clearTimeout(adTimerRef.current);
-  //   }
-
-  //   const randomTime = Math.floor(Math.random() * (10000 - 5000 + 1)) + 5000;
-
-  //   adTimerRef.current = setTimeout(() => {
-  //     setShowAd(true);
-  //   }, randomTime);
-  // };
-
   const handleAdClose = () => {
     setShowAd(false);
     startAdTimer();
   };
 
-  // useEffect(() => {
-  //   startAdTimer();
+  const startAdTimer = () => {
+    if (adTimerRef.current) {
+      clearTimeout(adTimerRef.current);
+    }
+    adTimerRef.current = setTimeout(() => {
+      setShowAd(true);
+    }, 5 * 60 * 1000);
+  };
 
-  //   return () => {
-  //     if (adTimerRef.current) {
-  //       clearTimeout(adTimerRef.current);
-  //     }
-  //   };
-  // }, []);
+  const fetchChatHistory = async () => {
+    if (!userName) return;
+
+    setIsLoadingHistory(true);
+    try {
+      const response = await fetch(`${API_URL}/chat-log`);
+      if (response.ok) {
+        const chatLog = await response.json();
+
+        const formattedMessages = chatLog.map((message) => {
+          const parts = message.split(":");
+          const user = parts[0];
+          const content = parts.slice(1).join(":");
+
+          return {
+            user,
+            message: content,
+            timestamp: new Date().toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+            isHistorical: true,
+          };
+        });
+
+        setMessages(formattedMessages);
+      } else {
+        console.error("Failed to fetch chat history");
+      }
+    } catch (error) {
+      console.error("Error fetching chat history:", error);
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  };
 
   useEffect(() => {
-    if (messageCount > 0 && messageCount % 5 === 0) {
+    if (messageCount > 0 && messageCount % 3 === 0) {
       setShowAd(true);
     }
   }, [messageCount]);
+
+  useEffect(() => {
+    const showAdCookie = Cookies.get("showAd");
+    if (showAdCookie === "true") {
+      setShowAd(true);
+    }
+  }, [showAd]);
+
+  useEffect(() => {
+    if (showAd) {
+      Cookies.set("showAd", "true", { expires: 7 });
+    } else {
+      Cookies.remove("showAd");
+    }
+  }, [showAd]);
 
   useEffect(() => {
     const username = localStorage.getItem("username");
@@ -125,6 +166,19 @@ const App = () => {
       setShowModal(false);
     }
   }, []);
+
+  useEffect(() => {
+    if (userName && readyState === ReadyState.OPEN) {
+      fetchChatHistory();
+      startAdTimer();
+    }
+
+    return () => {
+      if (adTimerRef.current) {
+        clearTimeout(adTimerRef.current);
+      }
+    };
+  }, [userName, readyState]);
 
   useEffect(() => {
     if (lastMessage !== null) {
@@ -160,6 +214,9 @@ const App = () => {
     setUserName("");
     setShowModal(true);
     setMessages([]);
+    if (adTimerRef.current) {
+      clearTimeout(adTimerRef.current);
+    }
   };
 
   const handleSendMessage = (e) => {
@@ -239,30 +296,51 @@ const App = () => {
             id="chat-body"
             className="flex-1 bg-bone p-4 overflow-y-auto space-y-4"
           >
-            {messages.map((msg, idx) => (
-              <div
-                key={idx}
-                className={`flex flex-col ${
-                  msg.user === userName ? "items-end" : "items-start"
-                }`}
-              >
-                <div className="flex items-center mb-1 text-xs text-wenge">
-                  {msg.user !== userName && (
-                    <span className="font-medium mr-2">{msg.user}</span>
-                  )}
-                  <span>{msg.timestamp}</span>
-                </div>
-                <div
-                  className={`p-3 max-w-xs md:max-w-sm rounded-t-lg ${
-                    msg.user === userName
-                      ? "bg-blue-500 text-white rounded-bl-lg rounded-br-none"
-                      : "bg-wenge text-bone rounded-br-lg rounded-bl-none"
-                  } shadow-sm`}
-                >
-                  {msg.message}
-                </div>
+            {isLoadingHistory ? (
+              <div className="flex justify-center items-center h-full">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-wenge"></div>
               </div>
-            ))}
+            ) : (
+              <>
+                {messages.length > 0 && (
+                  <div className="flex justify-center mb-4">
+                    <div className="bg-wenge/20 text-wenge text-xs py-1 px-3 rounded-full">
+                      {messages.some((msg) => msg.isHistorical)
+                        ? "Showing message history"
+                        : "No previous messages"}
+                    </div>
+                  </div>
+                )}
+
+                {messages.map((msg, idx) => (
+                  <div
+                    key={idx}
+                    className={`flex flex-col ${
+                      msg.user === userName ? "items-end" : "items-start"
+                    }`}
+                  >
+                    <div className="flex items-center mb-1 text-xs text-wenge">
+                      {msg.user !== userName && (
+                        <span className="font-medium mr-2">{msg.user}</span>
+                      )}
+                      <span>{msg.timestamp}</span>
+                      {/* {msg.isHistorical && (
+                        <span className="ml-2 text-gray-400">(historical)</span>
+                      )} */}
+                    </div>
+                    <div
+                      className={`p-3 max-w-xs md:max-w-sm rounded-t-lg ${
+                        msg.user === userName
+                          ? "bg-blue-500 text-white rounded-bl-lg rounded-br-none"
+                          : "bg-wenge text-bone rounded-br-lg rounded-bl-none"
+                      } ${msg.isHistorical ? "opacity-75" : ""} shadow-sm`}
+                    >
+                      {msg.message}
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
           </div>
           <form
             id="chat-controls"
