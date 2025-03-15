@@ -72,7 +72,6 @@ async def get_synonym(word, pos):
     else:
         return word
 
-
 def get_synonyms_sync(word, wn_pos):
     synonyms = []
     for syn in wordnet.synsets(word, wn_pos):
@@ -135,5 +134,14 @@ async def scramble_message(text: str, silliness: float) -> str:
     phase3 = await replace_punctuation(phase2, silliness)
     print(phase3)
 
-    new_words = [word.word for word in phase3]
-    return " ".join(new_words)
+    final = ""
+    for word in phase3:
+        underscore_split_word = word.word.split("_")
+        if underscore_split_word:
+            final += f" {underscore_split_word[0]} {underscore_split_word[1]}"
+        elif word.tag == '.':
+            final += word.word
+        else:
+            final += f" {word.word}"
+
+    return final
