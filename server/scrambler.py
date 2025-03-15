@@ -130,8 +130,8 @@ async def scramble_message(text: str, silliness: float) -> str:
 
     final = ""
     for word in phase3:
-        underscore_split_word = word.word.split("_")
-        if len(underscore_split_word) > 0:
+        if '_' in word.word:
+            underscore_split_word = word.word.split("_")
             final += f" {underscore_split_word[0]} {underscore_split_word[1]}"
         elif word.tag == '.':
             final += word.word
