@@ -97,7 +97,7 @@ async def get_synonym(word, pos):
     if not wn_pos:
         return word
     
-    synonyms = await asyncio.to_thread(get_synonyms_sync, word if isinstance(word, str) else word.word, wn_pos)
+    synonyms = await asyncio.to_thread(get_synonyms_sync, word, wn_pos)
 
     if synonyms:
         return random.choice(synonyms)
@@ -120,9 +120,9 @@ async def replace_synonyms(marked_words: List[Word], silliness: float) -> List[W
     result = []
     
     # Create a list to hold our results, initialized with None
-    result = [None] * len(marked_words)
+    result : List[Word] = [] * len(marked_words)
     
-    # Create tasks for processing wmarked words
+    # Create tasks for processing marked words
     for word in marked_words:
         if word.tag in ["ADJ", "ADV", "NOUN", "VERB"] and word.marked:
             # Start task but store it with its position
@@ -136,7 +136,6 @@ async def replace_synonyms(marked_words: List[Word], silliness: float) -> List[W
     if tasks:
         for task, position in tasks:
             processed_word = await task
-            print(f"adding word {processed_word.word} with position {processed_word.position}")
             result[position] = processed_word
     
     # Filter out any None values (shouldn't happen, but just in case)

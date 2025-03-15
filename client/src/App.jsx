@@ -242,7 +242,7 @@ const App = () => {
           minute: "2-digit",
         }),
       };
-      setMessages((prev) => [...prev, newMessage]);
+      // setMessages((prev) => [...prev, newMessage]);
       setMessageInput("");
       setMessageCount((prev) => prev + 1);
     }
@@ -393,3 +393,12 @@ const App = () => {
 };
 
 export default App;
+
+// "https://youtu.be/K3AN33pKJfE",
+// "https://youtu.be/j6a3b9NBCvg",
+// "https://youtu.be/X7P6WKKFL08",
+// "https://youtu.be/j5RBYrkvxPo",
+// "https://youtu.be/-Hn9c_2us8E",
+// "https://youtu.be/WptdmMFLEnU",
+// "https://youtu.be/E9icdLBFAvs",
+// "https://youtu.be/VP4TFvihAxA",
