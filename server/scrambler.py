@@ -82,10 +82,10 @@ def get_synonyms_sync(word, wn_pos):
 async def replace_synonyms(marked_words: List[Word], silliness: float) -> list:
     replaced_words: list = []
     replace_tasks = []
-    word_map = []
+    word_map = {}
     for word in marked_words:
         if word.tag in ["ADJ", "ADV", "NOUN", "VERB"] and word.marked:
-            replace_tasks.append(process_marked_word(word))
+            replace_tasks.append(await process_marked_word(word))
             word_map[word.position] = word.word
         else:
             replaced_words.append(word)
