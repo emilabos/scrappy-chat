@@ -1,22 +1,32 @@
 ﻿import random
+import asyncio
+import nltk  # type: ignore
+from nltk.corpus import stopwords, wordnet  # type: ignore
 
-import nltk
-from nltk.corpus import stopwords, wordnet
-nltk.download('stopwords')
-nltk.download('wordnet')
-nltk.download('punkt')
-nltk.download('punkt_tab')
+async def download_nltk_resources():
+    await asyncio.gather(
+        asyncio.to_thread(nltk.download, 'stopwords'),
+        asyncio.to_thread(nltk.download, 'wordnet'),
+        asyncio.to_thread(nltk.download, 'punkt'),
+        asyncio.to_thread(nltk.download, 'punkt_tab'),
+        asyncio.to_thread(nltk.download, 'averaged_perceptron_tagger_eng'),
+        asyncio.to_thread(nltk.download, 'universal_tagset')
+    )
+
 class Word:
     def __init__(self, word, marked, tag):
         self.word = word
         self.marked = marked
         self.tag = tag
+        
     def __repr__(self):
         return f"{self.word}: {self.tag}, Marked? {self.marked}"
+        
     def __str__(self):
         return self.word
-def mark_words(pos_tagged_words : list, silliness:float) -> list:
-    marked_words : list = []
+
+async def mark_words(pos_tagged_words: list, silliness: float) -> list:
+    marked_words: list = []
     for word, tag in pos_tagged_words:
         item = Word(word, False, tag)
         if 0.1 < silliness:
@@ -44,34 +54,52 @@ def universal_to_wn_pos(pos):
     }
     return dict[pos] if pos in dict else None
 
-def get_synonym(word, pos) :
-
+async def get_synonym(word, pos):
     wn_pos = universal_to_wn_pos(pos)
-    if not wn_pos :
+    if not wn_pos:
         return word
-    synonyms = []
-    for syn in wordnet.synsets(word, wn_pos):
-        for lemma in syn.lemmas():
-            synonyms.append(lemma.name())
+    
+    # Moving the synonym search to a separate thread since it's I/O bound
+    synonyms = await asyncio.to_thread(get_synonyms_sync, word, wn_pos)
+    
     if synonyms:
         return random.choice(synonyms)
     else:
         return word
-def replace_synonyms (marked_words:[Word], silliness:float) -> list:
-    replaced_words : list = []
+
+def get_synonyms_sync(word, wn_pos):
+    synonyms = []
+    for syn in wordnet.synsets(word, wn_pos):
+        for lemma in syn.lemmas():
+            synonyms.append(lemma.name())
+    return synonyms
+
+async def replace_synonyms(marked_words: [Word], silliness: float) -> list:
+    replaced_words: list = []
+    replace_tasks = []
+    
     for word in marked_words:
-        if word.tag in ["ADJ", "ADV", "NOUN", "VERB"]:
-            if word.marked:
-                replaced_words.append(Word(get_synonym(word.word, word.tag), word.marked, word.tag))
-            else:
-                replaced_words.append(word)
+        if word.tag in ["ADJ", "ADV", "NOUN", "VERB"] and word.marked:
+            replace_tasks.append(process_marked_word(word))
         else:
             replaced_words.append(word)
-
+    
+    # Wait for all synonym replacements to complete
+    processed_words = await asyncio.gather(*replace_tasks)
+    replaced_words.extend(processed_words)
+    
+    # Sort words back to their original order
+    replaced_words.sort(key=lambda x: marked_words.index(x) if x in marked_words else 
+                        next(i for i, w in enumerate(processed_words) if w.word == x.word))
+    
     return replaced_words
 
-def replace_punctuation (marked_words:[Word], silliness:float) -> list:
-    replaced_words : list = []
+async def process_marked_word(word):
+    new_word = await get_synonym(word.word, word.tag)
+    return Word(new_word, word.marked, word.tag)
+
+async def replace_punctuation(marked_words: [Word], silliness: float) -> list:
+    replaced_words: list = []
     for word in marked_words:
         if word.tag == ".":
             replaced_words.append(Word(random.choice([',', '?', '.']), word.marked, word.tag))
@@ -79,30 +107,21 @@ def replace_punctuation (marked_words:[Word], silliness:float) -> list:
             replaced_words.append(word)
     return replaced_words
 
-
-def scramble_message(text:str, silliness:float) -> str:
-    words : list = nltk.word_tokenize(text)
+async def scramble_message(text: str, silliness: float) -> str:
+    words: list = nltk.word_tokenize(text)
     tagged_words = nltk.pos_tag(words, tagset="universal")
-    new_words = []
-
-    # phase 1 is marking words based on silliness value
-    phase1 : [Word] = mark_words(tagged_words, silliness)
+    
+    # Phase 1: marking words based on silliness value
+    phase1 = await mark_words(tagged_words, silliness)
     print(phase1)
-    # phase 2 is replacing marked words with synomyms
-    phase2 : [Word] = replace_synonyms(phase1, silliness)
-    # phase 3 is replacing certain punctuation
+    
+    # Phase 2: replacing marked words with synonyms
+    phase2 = await replace_synonyms(phase1, silliness)
     print(phase2)
-    phase3 : [Word] = replace_punctuation(phase2, silliness)
+    
+    # Phase 3: replacing certain punctuation
+    phase3 = await replace_punctuation(phase2, silliness)
     print(phase3)
-
-    for word in phase3:
-        new_words.append(word.word)
-
+    
+    new_words = [word.word for word in phase3]
     return " ".join(new_words)
-
-if __name__ == "__main__":
-    while True:
-        input_text = input("Input the string to be scrambled: ")
-        silly = random.random()
-        print(f"Silliness is {silly}")
-        print(scramble_message(input_text, silly))
