@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { MessageCircleMore, User, LogOut } from "lucide-react";
 import useWebSocket, { ReadyState } from "react-use-websocket";
+import AdPopup from "./components/Popup";
 
 const WS_URL = "ws://localhost:8000/ws/";
 
@@ -71,9 +72,9 @@ const App = () => {
   const [showModal, setShowModal] = useState(true);
   const [messageInput, setMessageInput] = useState("");
   const [messages, setMessages] = useState([]);
+  const [showAd, setShowAd] = useState(true);
   const chatBodyRef = useRef(null);
 
-  // Only establish the websocket connection when we have a username
   const socketUrl = userName ? `${WS_URL}${userName}` : null;
 
   const { sendMessage, lastMessage, readyState } = useWebSocket(socketUrl, {
@@ -114,7 +115,6 @@ const App = () => {
   }, [lastMessage]);
 
   useEffect(() => {
-    // Scroll to bottom when messages update
     if (chatBodyRef.current) {
       chatBodyRef.current.scrollTop = chatBodyRef.current.scrollHeight;
     }
@@ -138,7 +138,6 @@ const App = () => {
       const formattedMessage = `${userName}:${messageInput}`;
       sendMessage(formattedMessage);
 
-      // Add message to our local state
       const newMessage = {
         user: userName,
         message: messageInput,
@@ -156,8 +155,8 @@ const App = () => {
     [ReadyState.CONNECTING]: "Connecting...",
     [ReadyState.OPEN]: "Connected",
     [ReadyState.CLOSING]: "Closing...",
-    [ReadyState.CLOSED]: "Disconnected",
-    [ReadyState.UNINSTANTIATED]: "Uninstantiated",
+    [ReadyState.CLOSED]: "You are disconnected",
+    [ReadyState.UNINSTANTIATED]: "You are not connected to the chat",
   }[readyState];
 
   return (
@@ -270,6 +269,7 @@ const App = () => {
           setShowModal={setShowModal}
         />
       )}
+      {showAd && <AdPopup isShowing={showAd} />}
     </>
   );
 };
