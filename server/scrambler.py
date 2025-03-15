@@ -83,14 +83,15 @@ async def replace_synonyms(marked_words: List[Word], silliness: float) -> list:
     replaced_words: list = []
     replace_tasks = []
     word_map = {}
+    i = 0
     for word in marked_words:
         if word.tag in ["ADJ", "ADV", "NOUN", "VERB"] and word.marked:
-            replace_tasks.append(await process_marked_word(word))
+            replace_tasks.append(await process_marked_word(word, i))
             word_map[word.position] = word.word
         else:
             replaced_words.append(word)
             word_map[word.position] = word.word
-    
+        i += 1
     processed_words = await asyncio.gather(*replace_tasks)
     replaced_words.extend(processed_words)
     
@@ -105,19 +106,21 @@ async def replace_synonyms(marked_words: List[Word], silliness: float) -> list:
     return replaced_words
 
 
-async def process_marked_word(word):
+async def process_marked_word(word, position):
     new_word = await get_synonym(word.word, word.tag)
-    return Word(new_word, word.marked, word.tag)
+    return Word(new_word, word.marked, word.tag, position)
 
 async def replace_punctuation(marked_words: List[Word], silliness: float) -> list:
     replaced_words: list = []
+    i = 0
     for word in marked_words:
         if word.tag == ".":
-            replaced_words.append(Word(random.choice(['?', '.', '!']), word.marked, word.tag))
+            replaced_words.append(Word(random.choice(['?', '.', '!']), word.marked, word.tag, i))
         elif word == ",":
-            replaced_words.append(Word(random.choice(['?', '.', '!', '-', '...']), word.marked, word.tag))
+            replaced_words.append(Word(random.choice(['?', '.', '!', '-', '...']), word.marked, word.tag, i))
         else:
             replaced_words.append(word)
+        i += 1
     return replaced_words
 
 async def scramble_message(text: str, silliness: float) -> str:
