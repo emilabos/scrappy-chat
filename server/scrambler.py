@@ -39,7 +39,7 @@ class Word:
     def __str__(self):
         return self.word
     
-async def get_new_message(original_messgae: str)->str:
+async def convert_message_to_emoji(message: str)->str:
     prompt = f"Convert this text message into a sequence of emojis, which represents the sentence. The output should only be the sequence of emojis, with no words. Example: The hiker went parachuting -> 🗻🧍‍♂️🪂. Message: {message}"
 
     res = mistral.chat.complete(
@@ -153,29 +153,32 @@ async def replace_punctuation(marked_words: List[Word], silliness: float) -> lis
     return replaced_words
 
 async def scramble_message(text: str, silliness: float) -> str:
-    words: list = nltk.word_tokenize(text)
-    tagged_words = nltk.pos_tag(words, tagset="universal")
-
     final = ""
+    if (random.randint(0,1)):
+        words: list = nltk.word_tokenize(text)
+        tagged_words = nltk.pos_tag(words, tagset="universal")
 
-    # Phase 1: marking words based on silliness value
-    phase1 = await mark_words(tagged_words, silliness)
-    print(phase1)
 
-    # Phase 2: replacing marked words with synonyms
-    phase2 = await replace_synonyms(phase1, silliness)
-    print(phase2)
+        # Phase 1: marking words based on silliness value
+        phase1 = await mark_words(tagged_words, silliness)
+        print(phase1)
 
-    # Phase 3: replacing certain punctuation
-    phase3 = await replace_punctuation(phase2, silliness)
-    print(phase3)
+        # Phase 2: replacing marked words with synonyms
+        phase2 = await replace_synonyms(phase1, silliness)
+        print(phase2)
 
-    for word in phase3:
-        if '_' in word.word:
-            word.word.replace('_', ' ')
-        elif word.tag == '.':
-            final += word.word
-        else:
-            final += f" {word.word}"
+        # Phase 3: replacing certain punctuation
+        phase3 = await replace_punctuation(phase2, silliness)
+        print(phase3)
+
+        for word in phase3:
+            if '_' in word.word:
+                word.word.replace('_', ' ')
+            elif word.tag == '.':
+                final += word.word
+            else:
+                final += f" {word.word}"
+    else:
+        final = await convert_message_to_emoji(text)
 
     return final
