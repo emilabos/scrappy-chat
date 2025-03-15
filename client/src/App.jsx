@@ -135,6 +135,9 @@ const App = () => {
   useEffect(() => {
     if (lastJsonMessage) {
       console.log("Got a new message:", lastJsonMessage);
+      // TODO fix this
+      const element = document.getElementById("chat-body");
+      element.scrollTop = element.scrollHeight;
     }
   }, [lastJsonMessage]);
 
