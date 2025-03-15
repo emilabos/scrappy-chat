@@ -224,12 +224,16 @@ const App = () => {
 
   const handleSendMessage = (e) => {
     e.preventDefault();
+
     if (
       messageInput.trim() !== "" &&
       userName &&
       readyState === ReadyState.OPEN
     ) {
-      // Format message as the server expects: username:message
+      if (messageInput.length < 10) {
+        alert("Message is too short!");
+        return;
+      }
       const formattedMessage = `${userName}:${messageInput}`;
       sendMessage(formattedMessage);
 
