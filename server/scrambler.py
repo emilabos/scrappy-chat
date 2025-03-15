@@ -15,11 +15,11 @@ async def download_nltk_resources():
 
 
 class Word:
-    def __init__(self, word, marked, tag):
+    def __init__(self, word, marked, tag, position):
         self.word = word
         self.marked = marked
         self.tag = tag
-
+        self.position = position
     def __repr__(self):
         return f"{self.word}: {self.tag}, Marked? {self.marked}"
 
@@ -80,19 +80,26 @@ def get_synonyms_sync(word, wn_pos):
 async def replace_synonyms(marked_words: List[Word], silliness: float) -> list:
     replaced_words: list = []
     replace_tasks = []
-
+    word_map = []
     for word in marked_words:
         if word.tag in ["ADJ", "ADV", "NOUN", "VERB"] and word.marked:
             replace_tasks.append(process_marked_word(word))
+            word_map[word.position] = word.word
         else:
             replaced_words.append(word)
+            word_map[word.position] = word.word
     
     processed_words = await asyncio.gather(*replace_tasks)
     replaced_words.extend(processed_words)
     
     # replaced_words.sort(key=lambda x: marked_words.index(x) if x in marked_words else
     #                     next(i for i, w in enumerate(processed_words) if w.word == x.word))
-    
+    for i in range(len(marked_words)):
+        item = word_map[i]
+        if isinstance(item, asyncio.Task):
+            replaced_words.append(await item)
+        else:
+            replaced_words.append(item)
     return replaced_words
 
 
