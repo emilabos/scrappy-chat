@@ -60,7 +60,7 @@ def universal_to_wn_pos(pos):
     return dict[pos] if pos in dict else None
 
 
-async def get_synonym(word, pos):
+async def get_synonym(word : Word, pos):
     wn_pos = universal_to_wn_pos(pos)
     if not wn_pos:
         return word
@@ -106,7 +106,7 @@ async def replace_synonyms(marked_words: List[Word], silliness: float) -> list:
     return replaced_words
 
 
-async def process_marked_word(word, position):
+async def process_marked_word(word:Word, position):
     new_word = await get_synonym(word.word, word.tag)
     return Word(new_word, word.marked, word.tag, position)
 
