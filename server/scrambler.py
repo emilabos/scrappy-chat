@@ -3,6 +3,19 @@ import asyncio
 import nltk  # type: ignore
 from nltk.corpus import stopwords, wordnet  # type: ignore
 from typing import List
+
+import json
+import random
+from mistralai import Mistral
+import time
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+mistral = Mistral(os.getenv("MISTRAL_API_KEY"))
+
+
 async def download_nltk_resources():
     await asyncio.gather(
         asyncio.to_thread(nltk.download, 'stopwords'),
@@ -25,6 +38,22 @@ class Word:
 
     def __str__(self):
         return self.word
+    
+async def get_new_message(original_messgae: str)->str:
+    prompt = f"Convert this text message into a sequence of emojis, which represents the sentence. The output should only be the sequence of emojis, with no words. Example: The hiker went parachuting -> 🗻🧍‍♂️🪂. Message: {message}"
+
+    res = mistral.chat.complete(
+        model="mistral-small-latest", 
+        messages=[
+            {
+                "content": prompt,
+                "role": "user",
+            },
+        ], 
+        stream=False
+    )
+
+    return res.choices[0].message.content
 
 
 async def mark_words(pos_tagged_words: list, silliness: float) -> list:
