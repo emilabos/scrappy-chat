@@ -79,12 +79,10 @@ async def websocket_endpoint(user_id: str, websocket: WebSocket):
                 data_new = f"{username}:{scrambled_message}"
                 
                 for user, user_socket in connected_users.items():
-                    if user != user_id:
-                        try:
-                            await user_socket.send_text(data_new)
-                        except:
-                            pass
-
+                    try:
+                        await user_socket.send_text(data_new)
+                    except:
+                        pass
                 update_chat_history(data_new)
     except WebSocketDisconnect:
         leave_message = f"SYSTEM:{user_id} has left the chat"
