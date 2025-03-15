@@ -90,8 +90,8 @@ async def replace_synonyms(marked_words: List[Word], silliness: float) -> list:
     processed_words = await asyncio.gather(*replace_tasks)
     replaced_words.extend(processed_words)
     
-    replaced_words.sort(key=lambda x: marked_words.index(x) if x in marked_words else 
-                        next(i for i, w in enumerate(processed_words) if w.word == x.word))
+    # replaced_words.sort(key=lambda x: marked_words.index(x) if x in marked_words else
+    #                     next(i for i, w in enumerate(processed_words) if w.word == x.word))
     
     return replaced_words
 
@@ -111,10 +111,11 @@ async def replace_punctuation(marked_words: List[Word], silliness: float) -> lis
             replaced_words.append(word)
     return replaced_words
 
-
 async def scramble_message(text: str, silliness: float) -> str:
     words: list = nltk.word_tokenize(text)
     tagged_words = nltk.pos_tag(words, tagset="universal")
+
+    final = ""
 
     # Phase 1: marking words based on silliness value
     phase1 = await mark_words(tagged_words, silliness)
@@ -128,7 +129,6 @@ async def scramble_message(text: str, silliness: float) -> str:
     phase3 = await replace_punctuation(phase2, silliness)
     print(phase3)
 
-    final = ""
     for word in phase3:
         if '_' in word.word:
             word.word.replace('_', ' ')
