@@ -188,3 +188,14 @@ async def scramble_message(text: str, silliness: float) -> str:
     except Exception as e:
         print(f"Error in scramble_message: {e}")
         return text  # Return the original text if anything fails
+    
+
+
+#       // "https://youtu.be/K3AN33pKJfE",
+#   // "https://youtu.be/j6a3b9NBCvg",
+#   // "https://youtu.be/X7P6WKKFL08",
+#   // "https://youtu.be/j5RBYrkvxPo",
+#   // "https://youtu.be/-Hn9c_2us8E",
+#   // "https://youtu.be/WptdmMFLEnU",
+#   // "https://youtu.be/E9icdLBFAvs",
+#   // "https://youtu.be/VP4TFvihAxA",

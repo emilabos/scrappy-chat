@@ -22,7 +22,6 @@ const UsernameModal = ({ setUserName, visible, setShowModal }) => {
     e.preventDefault();
     if (nameInput.trim() !== "") {
       setUserName(nameInput);
-      // localStorage.setItem("username", nameInput);
       setModalVisible(false);
 
       setTimeout(() => {
@@ -139,10 +138,7 @@ const App = () => {
   };
 
   useEffect(() => {
-    if (
-      messageCount > 0 &&
-      messageCount % (Math.floor(Math.random() * 5) + 1) === 0
-    ) {
+    if (messageCount > 0 && messageCount % 10 === 0) {
       setShowAd(true);
     }
   }, [messageCount]);
@@ -197,6 +193,7 @@ const App = () => {
             hour: "2-digit",
             minute: "2-digit",
           }),
+          fromMe: userName === receivedMessage.split(":")[0],
         };
 
         setMessages((prev) => [...prev, newMessage]);
@@ -237,15 +234,6 @@ const App = () => {
       const formattedMessage = `${userName}:${messageInput}`;
       sendMessage(formattedMessage);
 
-      const newMessage = {
-        user: userName,
-        message: messageInput,
-        timestamp: new Date().toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-      };
-      setMessages((prev) => [...prev, newMessage]);
       setMessageInput("");
       setMessageCount((prev) => prev + 1);
     }
@@ -278,7 +266,7 @@ const App = () => {
                 {connectionStatus}
               </span>
             </div>
-            <h1 className="text-4xl text-raisin-black font-bold flex gap-x-2 items-center justify-center flex-1">
+            <h1 className="text-4xl text-raisin-black font-bold flex gap-x-2 items-center justify-center flex-1 text-nowrap">
               <span>Scrappy Chat</span>
               <MessageCircleMore className="w-10 h-10" />
             </h1>
@@ -331,9 +319,6 @@ const App = () => {
                         <span className="font-medium mr-2">{msg.user}</span>
                       )}
                       <span>{msg.timestamp}</span>
-                      {/* {msg.isHistorical && (
-                        <span className="ml-2 text-gray-400">(historical)</span>
-                      )} */}
                     </div>
                     <div
                       className={`p-3 max-w-xs md:max-w-sm rounded-t-lg ${
