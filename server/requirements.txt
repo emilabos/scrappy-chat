@@ -2,4 +2,4 @@ fastapi
 websockets
 pydantic
 uvicorn
-mistralai
+fastapi[standard]
